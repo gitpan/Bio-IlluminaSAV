@@ -1,6 +1,5 @@
 NAME
-    Bio::IlluminaSAV - Parse Illumina SAV files (Share variables between
-    processes
+    Bio::IlluminaSAV - Parse Illumina SAV files
 
 SYNOPSIS
     Routines for parsing and extracting information from Illumina SAV files

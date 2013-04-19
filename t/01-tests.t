@@ -1,28 +1,24 @@
 # -*- mode: Perl; -*-
 
-use Test::More tests=>31;
+use Test::More tests=>22;
 use Test::Deep;
 
 BEGIN { use_ok( 'Bio::IlluminaSAV' ); use_ok( 'EA' ); }
 
-my ($ms_run, $hs_run, $ga_run) = map { Bio::IlluminaSAV->new($_); } qw(sample-miseq-run sample-hiseq-run sample-gaii-run);
+my ($ms_run, $ga_run) = map { Bio::IlluminaSAV->new($_); } qw(sample-miseq-run sample-gaii-run);
 
 ok($ms_run, "sample MS run initialized");
-ok($hs_run, "sample HS run initialized");
 ok($ga_run, "sample GAII run initialized");
 
 ## RunInfo stuff
 
 ok(($ms_run->max_cycles()) == 57, "sample MS run max cycles");
-ok(($hs_run->max_cycles()) == 207, "sample HS run max cycles");
 ok(($ga_run->max_cycles()) == 226, "sample GAII run max cycles");
 
 ok(($ms_run->num_lanes()) == 1, "sample MS num_lanes");
-ok(($hs_run->num_lanes()) == 8, "sample HS num_lanes");
 ok(($ga_run->num_lanes()) == 8, "sample GAII num_lanes");
 
 ok(($ms_run->num_reads()) == 2, "sample MS num_reads");
-ok(($hs_run->num_reads()) == 3, "sample HS num_reads");
 ok(($ga_run->num_reads()) == 3, "sample GAII num_reads");
 
 ## SAV file parsing
@@ -124,44 +120,6 @@ my @SAV_TESTS = (
        'tile'       => num(1107),
        'lane'       => num(1) } ],
 
-    # HiSeq
-    ['sample-hiseq-run/InterOp/ExtractionMetricsOut.bin', 42,
-     { 'cif_datestamp' => num(677888992),
-       'cif_timestamp' => num(2295312871),
-       'intensities'   => [num(5564), num(6875), num(3381), num(6047)],
-       'fwhm'          => [num(2.76, 0.1), num(2.80, 0.1), num(2.84, 0.1), num(2.82, 0.1)],
-       'tile'          => num(1110),
-       'cycle'         => num(2),
-       'lane'          => num(1) } ],
-
-    ['sample-hiseq-run/InterOp/CorrectedIntMetricsOut.bin', 42,
-     { 'snr'               => num(12.9, 0.1),
-       'avg_called_int'    => [num(4368), num(4360), num(4378), num(4323)],
-       'num_basecalls'     => [num(0), num(5.78e-40, 0.01), num(6.86e-40, 0.01), num(6.97e-40, 0.01), num(4.54e-40, 0.01)],
-       'avg_corrected_int' => [num(1072), num(1281), num(1322), num(853)],
-       'avg_intensity'     => num(1130),
-       'tile'              => num(1104),
-       'cycle'             => num(11),
-       'lane'              => num(1) } ],
-
-    ['sample-hiseq-run/InterOp/ErrorMetricsOut.bin', 42,
-     { 'err_rate'  => num(0.16, 0.01),
-       'err_reads' => [num(3668), num(14), num(0), num(0), num(0)],
-       'tile'      => num(1101),
-       'cycle'     => num(2),
-       'lane'      => num(1) } ],
-
-    ['sample-hiseq-run/InterOp/QMetricsOut.bin', 42,
-     { 'qscores'       => array_each(code(sub { my $x = shift; return ($x >= 0) })),
-       'tile'          => num(1102),
-       'cycle'         => num(12),
-       'lane'          => num(1) } ],
-
-    ['sample-hiseq-run/InterOp/TileMetricsOut.bin', 42,
-     { 'metric_val' => num(2096691),
-       'metric'     => num(102),
-       'tile'       => num(1202),
-       'lane'       => num(1) } ],
     );
 
 foreach my $sav_test (@SAV_TESTS)
