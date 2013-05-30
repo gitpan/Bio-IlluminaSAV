@@ -3,7 +3,7 @@
 use Test::More tests=>22;
 use Test::Deep;
 
-BEGIN { use_ok( 'Bio::IlluminaSAV' ); use_ok( 'EA' ); }
+BEGIN { use_ok( 'Bio::IlluminaSAV' ); }
 
 my ($ms_run, $ga_run) = map { Bio::IlluminaSAV->new($_); } qw(sample-miseq-run sample-gaii-run);
 
