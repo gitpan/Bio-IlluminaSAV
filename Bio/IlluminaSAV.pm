@@ -2,7 +2,7 @@
 
 package Bio::IlluminaSAV;
 
-our $VERSION = '1.0.' . [qw$Revision: 7014 $]->[1];
+our $VERSION = '1.0.' . [qw$Revision: 7189 $]->[1];
 
 =head1 NAME
 
@@ -459,3 +459,4 @@ sub new
 }
 
 1;
+

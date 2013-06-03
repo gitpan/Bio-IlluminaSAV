@@ -21,4 +21,4 @@ requires:
   Test::Deep: 0
   Test::Simple: 0
   XML::LibXML::Reader: 0
-version: v1.0.7014
+version: v1.0.7189
