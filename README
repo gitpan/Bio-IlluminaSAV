@@ -35,6 +35,7 @@ CONSTANTS
 
 FUNCTIONS
     cur_cycle Return the current run extraction cycle
+    cur_copy_cycle Return the current copy cycle
     max_cycles Return the maximum number of cycles
     num_lanes Return the number of lanes
     num_reads Return the number of reads

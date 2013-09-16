@@ -2,7 +2,7 @@
 
 package Bio::IlluminaSAV;
 
-our $VERSION = '1.0.' . [qw$Revision: 7189 $]->[1];
+our $VERSION = '1.0.' . [qw$Revision: 9706 $]->[1];
 
 =head1 NAME
 
@@ -137,14 +137,6 @@ use constant TILE_METRIC_CONTROL_LANE    => 400;
 
 ### Helper subs
 
-sub rundir_concat
-{
-    my ($rundir, @rest) = @_;
-    my @rundir_dirs = File::Spec->splitdir($rundir);
-
-    return File::Spec->join(@rundir_dirs, @rest);
-}
-
 sub unpack_fmt
 {
     my ($packrule) = @_;
@@ -161,6 +153,15 @@ sub unpack_fmt
 
 =cut
 
+# System-independent way of accessing stuff beneath a run directory
+sub rundir_concat
+{
+    my ($self, @rest) = @_;
+    my @rundir_dirs = File::Spec->splitdir($self->{'rundir'});
+
+    return File::Spec->join(@rundir_dirs, @rest);
+}
+
 =item cur_cycle
 Return the current run extraction cycle
 =cut
@@ -174,6 +175,20 @@ sub cur_cycle
     
     return $cycles_sorted[0];
 }
+
+=item cur_copy_cycle
+Return the current copy cycle
+=cut
+sub cur_copy_cycle
+{
+    my $self = shift;
+    my $glob_pat = $self->rundir_concat('Data', 'Intensities', 'BaseCalls', 'L001', 'C*.1');
+
+    my @cycles_sorted = sort { $b <=> $a } (map { /C(\d+)\.1/ && $1; } (glob($glob_pat)));
+
+    return (scalar(@cycles_sorted) == 0) ? 0 : $cycles_sorted[0];
+}
+
 
 =item max_cycles
 Return the maximum number of cycles
@@ -212,7 +227,6 @@ Return the number of reads
 sub num_reads
 {
     my $self = shift;
-
     return scalar(@{$self->run_info->{'reads'}});
 }
 
@@ -221,7 +235,7 @@ Returns a hash with RunInfo.xml info
 =cut
 sub run_info {
     my $self = shift;
-    $self->{'runinfo'} = parse_runinfo(rundir_concat($self->{'rundir'}, 'RunInfo.xml'))
+    $self->{'runinfo'} = parse_runinfo($self->rundir_concat('RunInfo.xml'))
         unless (defined($self->{'runinfo'}));
     return $self->{'runinfo'};
 }
@@ -233,7 +247,7 @@ sub extraction_metrics
 {
     my $self = shift;
 
-    return parse_sav_file(rundir_concat($self->{'rundir'}, 'InterOp', 'ExtractionMetricsOut.bin'));
+    return parse_sav_file($self->rundir_concat('InterOp', 'ExtractionMetricsOut.bin'));
 }
 
 =item quality_metrics
@@ -243,7 +257,7 @@ sub quality_metrics
 {
     my $self = shift;
 
-    return parse_sav_file(rundir_concat($self->{'rundir'}, 'InterOp', 'QMetricsOut.bin'));
+    return parse_sav_file($self->rundir_concat('InterOp', 'QMetricsOut.bin'));
 }
 
 =item error_metrics
@@ -253,7 +267,7 @@ sub error_metrics
 {
     my $self = shift;
 
-    return parse_sav_file(rundir_concat($self->{'rundir'}, 'InterOp', 'ErrorMetricsOut.bin'));
+    return parse_sav_file($self->rundir_concat('InterOp', 'ErrorMetricsOut.bin'));
 }
 
 =item tile_metrics
@@ -263,7 +277,7 @@ sub tile_metrics
 {
     my $self = shift;
 
-    return parse_sav_file(rundir_concat($self->{'rundir'}, 'InterOp', 'TileMetricsOut.bin'));
+    return parse_sav_file($self->rundir_concat('InterOp', 'TileMetricsOut.bin'));
 }
 
 =item corrected_int_metrics
@@ -273,7 +287,7 @@ sub corrected_int_metrics
 {
     my $self = shift;
 
-    return parse_sav_file(rundir_concat($self->{'rundir'}, 'InterOp', 'CorrectedIntMetricsOut.bin'));
+    return parse_sav_file($self->rundir_concat('InterOp', 'CorrectedIntMetricsOut.bin'));
 }
 
 =item control_metrics
@@ -283,7 +297,7 @@ sub control_metrics
 {
     my $self = shift;
 
-    return parse_sav_file(rundir_concat($self->{'rundir'}, 'InterOp', 'ControlMetricsOut.bin'));
+    return parse_sav_file($self->rundir_concat('InterOp', 'ControlMetricsOut.bin'));
 }
 
 =item image_metrics
@@ -293,7 +307,7 @@ sub image_metrics
 {
     my $self = shift;
 
-    return parse_sav_file(rundir_concat($self->{'rundir'}, 'InterOp', 'ImageMetricsOut.bin'));
+    return parse_sav_file($self->rundir_concat('InterOp', 'ImageMetricsOut.bin'));
 }
 
 ### Functional interfaces
@@ -312,7 +326,6 @@ sub parse_sav_file
     if ($type)
     {
         my $rec;
-        my @packrules;
         my $unpackfmt;
         my @ret;
         my $sav_version;
@@ -336,7 +349,7 @@ sub parse_sav_file
 
         local $/ = \$reclen;
 
-        @packrules = @{$SAV_FORMAT{$type}};
+        my @packrules = @{$SAV_FORMAT{$type}};
         return undef unless (@packrules);
 
         if ($reclen == 0)
@@ -441,6 +454,24 @@ sub parse_runinfo
         $parsed_read{'is_index'}  = ((defined($idx_attr)?$idx_attr:"") eq 'Y') || ($has_idx_child);
 
         push @{$ret{'reads'}}, \%parsed_read;
+    }
+
+    $ret{'reads'} = [sort { $a->{readnum} <=> $b->{readnum} } @{$ret{'reads'}}];
+    my $first_cyc = 1;
+    foreach my $read (@{$ret{'reads'}})
+    {
+        $read->{'first_cycle'} = $first_cyc;
+        $read->{'last_cycle'} = $first_cyc + $read->{'numcycles'} - 1;
+        $first_cyc = $read->{'last_cycle'} + 1;
+    }
+
+    if (scalar(grep { !($_->{'is_index'}) } @{$ret{'reads'}}) > 1)
+    {
+        $ret{'runtype'} = 'PE';
+    }
+    else
+    {
+        $ret{'runtype'} = 'SR';
     }
 
     return \%ret;
